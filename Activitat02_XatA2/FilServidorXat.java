@@ -15,11 +15,21 @@ public class FilServidorXat extends Thread {
     public void run() {
         try {
             String missatge;
-            while (!(missatge = (String) in.readObject()).equals(MSG_SORTIR)) {
-                System.out.println( ": " + missatge);
+            while ((missatge = in.readLine()) != null) {
+                if (missatge.equalsIgnoreCase(MSG_SORTIR)) {
+                    System.out.println("Fil xat finalitzat.");
+                    break;
+                }
+                System.out.println("Missatge (\'sortir\' per tancar): Rebut: " + missatge);
             }
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException e) {
             System.out.println("Error al fil del servidor: " + e.getMessage());
+        } finally {
+            try {
+                in.close();
+            } catch (IOException e) {
+                System.out.println("Error al tancar el flux d'entrada: " + e.getMessage());
+            }
         }
     }
 }
