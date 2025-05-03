@@ -16,7 +16,7 @@ public class ClientXat {
             socket = new Socket(HOST, PORT);
             System.out.println("Client connectat a " + HOST + ":" + PORT);
             out = socket.getOutputStream();
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream())); // Initialize 'in'
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             System.out.println("Flux d'entrada i sortida creat.");
         } catch (IOException e) {
             System.out.println("Error al crear el socket del servidor: " + e.getMessage());
