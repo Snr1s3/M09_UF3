@@ -11,15 +11,12 @@ public class Fitxer{
     
     public byte[] getContingut() throws IOException {
         File fitxer = new File(nom);
-
         if (!fitxer.exists()) {
             throw new FileNotFoundException("El fitxer no existeix: " + nom);
         }
-
         FileInputStream fis = new FileInputStream(fitxer);
         contingut = fis.readAllBytes();
         fis.close();
-
         return contingut;
     }
 }

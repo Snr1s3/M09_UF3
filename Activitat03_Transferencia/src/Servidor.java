@@ -1,10 +1,12 @@
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -38,21 +40,23 @@ public class Servidor{
     }
 
     public boolean enviarFitxers(){
-        try{
+        try {
             System.out.println("Esperant el nom del fitxer del client...");
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             String nom = in.readLine();
-            if(nom.equalsIgnoreCase("sortir") || nom.isBlank()){
+            if (nom.equalsIgnoreCase("sortir") || nom.isBlank()) {
                 System.out.println("Sortint");
                 return false;
             }
             Fitxer fitxer = new Fitxer(nom);
             byte[] contingut = fitxer.getContingut();
-            System.out.println("Contingut del fitxer a enviar: " + contingut.length + " bytes");
-            socket.getOutputStream().write(contingut);
-            socket.getOutputStream().flush();
-            System.out.println("Contingut del fitxer a enviar: " + contingut.length + " bytes");
-        }catch (Exception e){
+            System.out.println("Enviant fitxer: " + nom);
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            dos.writeInt(contingut.length);    
+            dos.write(contingut);              
+            dos.flush();
+            System.out.println("Fitxer enviat correctament.");
+        } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
             return false;
         }
