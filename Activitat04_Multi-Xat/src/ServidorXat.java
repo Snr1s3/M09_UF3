@@ -3,7 +3,7 @@ import java.net.*;
 import java.util.Hashtable;
 
 public class ServidorXat {
-    public static final int PORT = 8888;
+    public static final int PORT = 9999;
     public static final String HOST = "localhost";
     public static final String MSG_SORTIR = "sortir";
     private Hashtable<String, GestorClients> clients = new Hashtable<>();
@@ -13,9 +13,10 @@ public class ServidorXat {
     public void servidorAEscoltar() {
         try {
             serverSocket = new ServerSocket(PORT);
-            System.out.println("Servidor escoltant a " + HOST + ":" + PORT);
+            System.out.println("Servidor iniciat a " + HOST + ":" + PORT);
             while (!sortir) {
                 Socket clientSocket = serverSocket.accept();
+                System.out.println("Client connectat: " + clientSocket.getInetAddress());
                 GestorClients gestor = new GestorClients(clientSocket, this);
                 new Thread(gestor).start();
             }
@@ -37,7 +38,9 @@ public class ServidorXat {
     }
 
     public void finalitzarXat() {
+        System.out.println("Tancant tots els clients.");
         enviarMissatgeGrup(MSG_SORTIR);
+        System.out.println("DEBUG: multicast sortir");
         clients.clear();
         System.exit(0);
     }
@@ -46,7 +49,8 @@ public class ServidorXat {
         String nom = gestor.getNom();
         if (nom != null && !nom.isBlank()) {
             clients.put(nom, gestor);
-            enviarMissatgeGrup(Missatge.getMissatgeGrup(nom + " ha entrat al xat."));
+            System.out.println(nom + " connectat.");
+            System.out.println("DEBUG: multicast Entra: " + nom);
         }
     }
 
@@ -65,6 +69,7 @@ public class ServidorXat {
     }
 
     public synchronized void enviarMissatgePersonal(String destinatari, String remitent, String missatge) {
+        System.out.println("Missatge personal per (" + destinatari + ") de (" + remitent + "): " + missatge);
         GestorClients gestor = clients.get(destinatari);
         if (gestor != null) {
             gestor.enviarMissatge(remitent, Missatge.getMissatgePersonal(destinatari, missatge));
