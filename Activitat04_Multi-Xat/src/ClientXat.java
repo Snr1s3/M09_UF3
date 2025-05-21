@@ -11,7 +11,7 @@ public class ClientXat {
     public void connecta() {
         try {
             socket = new Socket("localhost", 8888);
-            System.out.println("Client connectat a " +"localhost:" +8888);
+            System.out.println("Client connectat a localhost:8888");
             out = new ObjectOutputStream(socket.getOutputStream());
             in = new ObjectInputStream(socket.getInputStream());
         } catch (Exception e) {
@@ -19,13 +19,19 @@ public class ClientXat {
         }
     }
 
-    public void enviarMissatge(Object missatge) {
+    public void enviarMissatge(String missatge) {
+        try {
+            out.writeObject(missatge);
+            out.flush();
+        } catch (Exception e) {
+            System.out.println("Error enviant missatge: " + e.getMessage());
+        }
     }
 
-    public void tanca() {
+    public void tancarClient() {
         try {
-            if (socket != null) socket.close();
             if (out != null) out.close();
+            if (in != null) in.close();
             if (socket != null) socket.close();
             System.out.println("Sortint...");
             System.out.println("\nConexio tancada");
@@ -38,11 +44,15 @@ public class ClientXat {
         try {
             while (!sortir) {
                 Object missatgeCru = in.readObject();
-                if (missatgeCru instanceof Missatge) {
-                    Missatge missatge = (Missatge) missatgeCru;
-                    String missatgeRaw = missatge.toString(); 
-                    String codi = Missatge.getCodiMissatge(missatgeRaw); 
-                    String[] parts = Missatge.getPartsMissatge(missatgeRaw); 
+                if (missatgeCru instanceof String) {
+                    String missatge = (String) missatgeCru;
+                    String codi = Missatge.getCodiMissatge(missatge);
+                    String[] parts = Missatge.getPartsMissatge(missatge);
+                    
+                    if (codi == null) {
+                        System.out.println("Missatge rebut amb format incorrecte: " + missatge);
+                        continue;
+                    }
 
                     switch (codi) {
                         case Missatge.CODI_SORTIR_TOTS:
@@ -50,22 +60,28 @@ public class ClientXat {
                             System.out.println("El servidor ha tancat el xat per a tots.");
                             break;
                         case Missatge.CODI_MSG_PERSONAL:
-                            System.out.println("[Privat] " + parts[0] + ": " + parts[1]);
+                            if (parts.length <= 3)
+                                System.out.println("[Privat] " + parts[1] + ": " + parts[2]);
+                            else
+                                System.out.println("Missatge personal mal format: " + missatge);
                             break;
                         case Missatge.CODI_MSG_GRUP:
-                            System.out.println("[Grup] " + parts[0]);
+                            if (parts.length >= 1)
+                                System.out.println("[Grup] " + parts[1]);
+                            else
+                                System.out.println("Missatge de grup mal format: " + missatge);
                             break;
                         default:
                             System.out.println("Codi de missatge desconegut: " + codi);
                     }
                 } else {
-                    System.out.println("Error: Objecte rebut no és un Missatge.");
+                    System.out.println("Error: Objecte rebut no és un String.");
                 }
             }
         } catch (Exception e) {
             System.out.println("Error en la recepció de missatges: " + e.getMessage());
         } finally {
-            tanca();
+            tancarClient();
         }
     }
 
@@ -77,15 +93,72 @@ public class ClientXat {
         System.out.println("4 - Sortir del xat (només aquest client)");
         System.out.println("5 - Sortir del xat per a tots els clients");
         System.out.println("Enter buit - Sortir del client");
-        System.out.println("help - Mostrar aquesta ajuda");
     }
 
     public String getLinea(Scanner scanner, String missatge, boolean obligatori) {
-        return "";
+        String linia;
+        do {
+            System.out.print(missatge);
+            linia = scanner.nextLine();
+            if (!obligatori) break;
+        } while (linia.isBlank());
+        return linia;
     }
 
     public static void main(String[] args) {
         ClientXat client = new ClientXat();
         client.connecta();
+        new Thread(client::execucio).start();
+        client.ajuda();
+        Scanner scanner = new Scanner(System.in);
+
+        while (!client.sortir) {
+            String opcio = client.getLinea(scanner, "Opció: ", false);
+            if (opcio.isBlank()) {
+                client.sortir = true;
+                break;
+            }
+            switch (opcio) {
+                case "1":
+                    String nom = client.getLinea(scanner, "Introdueix el teu nom: ", true);
+                    if (!nom.isBlank()) {
+                        client.enviarMissatge(Missatge.getMissatgeConectar(nom));
+                    } else {
+                        System.out.println("El nom no pot estar buit.");
+                    }
+                    break;
+                case "2":
+                    String destinatari = client.getLinea(scanner, "Introdueix el destinatari: ", true);
+                    String missatgePersonal = client.getLinea(scanner, "Introdueix el missatge: ", true);
+                    if (!destinatari.isBlank() && !missatgePersonal.isBlank()) {
+                        client.enviarMissatge(Missatge.getMissatgePersonal(destinatari, missatgePersonal));
+                    } else {
+                        System.out.println("El destinatari i el missatge no poden estar buits.");
+                    }
+                    break;
+                case "3":
+                    String missatgeGrup = client.getLinea(scanner, "Introdueix el missatge al grup: ", true);
+                    if (!missatgeGrup.isBlank()) {
+                        client.enviarMissatge(Missatge.getMissatgeGrup(missatgeGrup));
+                    } else {
+                        System.out.println("El missatge no pot estar buit.");
+                    }
+                    break;
+                case "4":
+                    client.enviarMissatge(Missatge.getMissatgeSortirClient("sortir"));
+                    client.sortir = true;
+                    break;
+                case "5":
+                    client.enviarMissatge(Missatge.getMissatgeSortirTots("sortir"));
+                    client.sortir = true;
+                    break;
+                case "help":
+                    client.ajuda();
+                    break;
+                default:
+                    System.out.println("Opció no vàlida.");
+            }
+        }
+        client.tancarClient();
     }
 }
